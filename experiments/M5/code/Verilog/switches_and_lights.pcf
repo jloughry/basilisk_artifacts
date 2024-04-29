@@ -1,0 +1,149 @@
+# On-board LEDS (8) numbered 0 to 7, left to right.
+set_io LED0 B5 # PIO0_39
+set_io LED1 B4 # PIO0_41
+set_io LED2 A2 # PIO0_42
+set_io LED3 A1 # PIO0_44
+set_io LED4 C5 # PIO0_45
+set_io LED5 C4 # PIO0_46
+set_io LED6 B3 # PIO0_47
+set_io LED7 C3 # PIO0_51
+
+# 12.000000 MHz clock
+set_io hwclk J3
+
+set_io run_lamp D1 # PIO3_09
+set_io halt_lamp E2 # PIO3_13
+set_io clock_lamp F2 # PIO3_17
+set_io aux_1_lamp G2 # PIO3_21
+set_io aux_2_lamp H2 # PIO3_23
+
+set_io reset_switch_high J2 # PIO3_28
+set_io reset_switch_low K3 # PIO3_31
+
+set_io run_stop_switch_high M2 # PIO3_39
+set_io run_stop_switch_low L3 # PIO3_37
+
+set_io clock_step_switch_high P1 # PIO3_46
+set_io clock_step_switch_low N3 # PIO3_45
+
+set_io fast_slow_switch_high C2 # PIO3_05
+set_io fast_slow_switch_low B2 # PIO3_01
+
+set_io cycle_switch_high D2 # PIO3_07
+set_io cycle_switch_low F1 # PIO3_19
+
+set_io aux_1_switch_high G1 # PIO3_25
+set_io aux_1_switch_low H1 # PIO3_27
+
+set_io aux_2_switch_high K1 # PIO3_30
+set_io aux_2_switch_low J1 # PIO3_29
+
+set_io acc_led_0 L1 # PIO3_33
+set_io acc_led_1 M1 # PIO3_35
+set_io acc_led_2 N2 # PIO3_41
+set_io acc_led_3 P2 # PIO3_48
+
+# set_io bus_conflict_mux_data_3 P10 # PIO2_31
+# set_io bus_conflict_mux_data_2 M11 # PIO2_37
+# set_io bus_conflict_mux_data_1 T14 # PIO2_36
+# set_io bus_conflict_mux_data_0 T16 # PIO2_41
+
+set_io bus_conflict_mux_gnd_1 T14 # PIO2_36
+set_io bus_conflict_mux_gnd_2 T16 # PIO2_41
+set_io bus_conflict_mux_gnd_3 P10 # PIO2_31
+set_io bus_conflict_mux_gnd_4 M11 # PIO2_37
+
+# J2:
+set_io sequencer_mon_3 R15 # PIO1_01
+set_io sequencer_mon_2 P15 # PIO1_03
+set_io sequencer_mon_1 P16 # PIO1_04
+set_io sequencer_mon_0 M15 # PIO1_14
+
+set_io PC_monitor_3 N16 # PIO1_08
+set_io PC_monitor_2 M16 # PIO1_12
+set_io PC_monitor_1 K15 # PIO1_20
+set_io PC_monitor_0 K14 # PIO1_18
+
+set_io IR_monitor_3 G14 # PIO1_37
+set_io IR_monitor_2 J15 # PIO1_19
+set_io IR_monitor_1 H16 # PIO1_28, also GBIN2
+set_io IR_monitor_0 G16 # PIO1_30
+
+set_io MAR_monitor_3 F16 # PIO1_34
+set_io MAR_monitor_2 E16 # PIO1_38
+set_io MAR_monitor_1 D16 # PIO1_40
+set_io MAR_monitor_0 C16 # PIO1_47
+
+set_io MDR_monitor_3 L16 # PIO1_16
+set_io MDR_monitor_2 K16 # PIO1_21
+set_io MDR_monitor_1 J14 # PIO1_22
+set_io MDR_monitor_0 F14 # PIO1_42
+
+# WRITE_monitor is an orphan; no more pins left on J2
+# set_io WRITE_monitor H14 # PIO1_29
+
+set_io ALU_multiplexed_mon_3 H14 # PIO1_29, J2 pin 22
+set_io ALU_multiplexed_mon_2 G15 # PIO1_32, J2 pin 26
+set_io ALU_multiplexed_mon_1 F15 # PIO1_36, J2 pin 28
+set_io ALU_multiplexed_mon_0 E14 # PIO1_46, J2 pin 30
+
+set_io ALU_A_multiplexed_mon_gnd_1 D15 # PIO1_44, J2 pin 34
+# ALU_B_multiplexed_mon_gnd_2 is an orphan; no pins left on J2
+set_io ALU_control_multiplexed_mon_gnd_3 D14 # PIO1_51, J2 pin 36
+set_io ALU_result_multiplexed_mon_gnd_4 B16 # PIO1_49, J2 pin 38
+
+# unused on J4 is R1 # PIO3_50
+
+set_io PC_0 T1 # PIO2_01
+set_io PC_1 R2 # PIO2_03
+set_io PC_2 R3 # PIO2_07
+set_io PC_3 T5 # PIO2_15
+
+set_io ACC_0 T6 # PIO2_18
+set_io ACC_1 T7 # PIO2_20
+set_io ACC_2 T9 # PIO2_24
+set_io ACC_3 P8 # PIO2_17
+
+set_io IR_0 T10 # PIO2_33
+set_io IR_1 T11 # PIO2_34
+set_io IR_2 N10 # PIO2_32
+set_io IR_3 N12 # PIO2_39
+
+set_io ALU_A_0 T13 # PIO2_38
+set_io ALU_A_1 T15 # PIO2_35
+set_io ALU_A_2 R16 # PIO2_43
+set_io ALU_A_3 T2 # PIO2_05
+
+set_io ALU_B_0 T3 # PIO2_09
+set_io ALU_B_1 R4 # PIO2_10
+set_io ALU_B_2 R5 # PIO2_08
+set_io ALU_B_3 R6 # PIO2_16
+
+set_io ALU_result_0 T8 # PIO2_21
+set_io ALU_result_1 R9 # PIO2_26
+set_io ALU_result_2 P9 # PIO2_28
+set_io ALU_result_3 R10 # PIO2_29
+
+set_io MAR_0 A5 # PIO0_38
+set_io MAR_1 B6 # PIO0_33
+set_io MAR_2 A6 # PIO0_36
+set_io MAR_3 B7 # PIO0_32
+
+set_io MDR_0 B8 # PIO0_29
+set_io MDR_1 A9 # PIO0_23
+set_io MDR_2 A10 # PIO0_17
+set_io MDR_3 A11 # PIO0_18
+
+# set_io bus_conflict_mux_gnd_1 C6 # PIO0_34
+# set_io bus_conflict_mux_gnd_2 C7 # PIO0_31
+# set_io bus_conflict_mux_gnd_3 A7 # PIO0_30
+# set_io bus_conflict_mux_gnd_4 B9 # PIO0_27
+
+set_io bus_conflict_mux_data_3 C6 # PIO0_34
+set_io bus_conflict_mux_data_2 C7 # PIO0_31
+set_io bus_conflict_mux_data_1 A7 # PIO0_30
+set_io bus_conflict_mux_data_0 B9 # PIO0_27
+
+# unused on J1 is C9 # PIO0_20
+# also unused on J1 is B11 # PIO0_15
+
