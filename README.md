@@ -15,5 +15,5 @@ Source code and raw data from experiments
 - [R code for data analysis](experiments/diodes/code/R/beam_rotation.r)
 - [C++ source for the experimental apparatus](experiments/diodes/code/Arduino/)
 ### I2C
-- [Target](experiments/i2c/target/)
-- [Attacker](experiments/i2c/attacker/)
+- [Target](experiments/I2C/target/)
+- [Attacker](experiments/I2C/attacker/)
