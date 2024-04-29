@@ -1,4 +1,4 @@
-# basilisk_artificats
+# basilisk_artifacts
 Code and data for the basilisk paper
 ## Experiments
 Source code and raw data from experiments
