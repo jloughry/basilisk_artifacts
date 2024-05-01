@@ -1,5 +1,10 @@
 # basilisk_artifacts
 Code and data for the basilisk paper
+## Abstract
+Materials for the Artifact Evaluation (AE) part of the [18th USENIX Workshop on
+Offensive Technologies (WOOT '24)](https://www.usenix.org/conference/woot24),
+August 12-13, 2024 in Philadelphia.
+- [Artifact evaluation abstract](artifact_evaluation_abstract.pdf) (PDF)
 ## Experiments
 Source code and raw data from experiments
 ### M5 computer
