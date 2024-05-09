@@ -173,3 +173,5 @@ done
 # stacked_plot 980 2.5 "10kΩ" 1.7 12
 # stacked_plot 980 1.8 "10kΩ" 1.17 16
 
+echo "\n(That warning refers to instances where there was no valid contour to draw.)\n"
+
