@@ -40,3 +40,6 @@ set label sprintf("V_{IH} = %.1f V", logic_threshold) at graph -.1,-.08 front
 plot data using 1:2:3 with image, \
     contours using 1:2 with lines lw contour_thickness lc black
 
+print \
+"Note: messages about \"Skipping data file with no valid points\" are harmless."
+

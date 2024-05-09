@@ -7,7 +7,6 @@ raw_green_data="20230522.1942_405_nm_laser_I2C_green_LED.txt"
 raw_other_red_data="20230522.2039_405_nm_laser_I2C_other_red_LED.txt"
 raw_deep_red_data="20230523.1820_405_nm_laser_I2C_deep_red_LED.txt"
 raw_yellow_data="20230523.1928_405_nm_laser_I2C_yellow_LED.txt"
-raw_oops_data="20230523.2029_405_nm_laser_I2C_yellow_LED_oops_I_left_it_on.txt"
 raw_other_yellow_data="20230524.0720_405_nm_laser_I2C_other_yellow_LED.txt"
 raw_pink_data="20230524.0825_405_nm_laser_I2C_pink_LED.txt"
 raw_UV_data="20230524.0912_405_nm_laser_I2C_UV_led.txt"
@@ -32,7 +31,7 @@ function check_data_file_exists () {
 
 for i in ${raw_red_data} ${raw_blue_data} ${raw_white_data} \
   ${raw_green_data} ${raw_other_red_data} ${raw_deep_red} \
-  ${raw_yellow_data} ${raw_oops_data} ${raw_other_yellow_data} \
+  ${raw_yellow_data} ${raw_other_yellow_data} \
   ${raw_pink_data} ${raw_UV_data} ${raw_other_blue_data} \
   ${raw_Adafruit_red_data} ${raw_other_green_data} ${raw_last_red_data}
 do
@@ -62,7 +61,6 @@ cook_data ${raw_green_data} green
 cook_data ${raw_other_red_data} other_red
 cook_data ${raw_deep_red_data} deep_red
 cook_data ${raw_yellow_data} yellow
-cook_data ${raw_oops_data} oops
 cook_data ${raw_other_yellow_data} other_yellow
 cook_data ${raw_pink_data} pink
 cook_data ${raw_UV_data} UV
@@ -154,4 +152,6 @@ single_plot   other_green  "Other green"  405 3.3 "2.2 kΩ" 2.0 1
 # stacked_plot 780 3.3 "10kΩ" 2.0 8
 # stacked_plot 780 2.5 "10kΩ" 1.7 12
 # stacked_plot 780 1.8 "10kΩ" 1.17 16
+
+echo "\n(That warning refers to instances where there was no valid contour to draw.)\n"
 
