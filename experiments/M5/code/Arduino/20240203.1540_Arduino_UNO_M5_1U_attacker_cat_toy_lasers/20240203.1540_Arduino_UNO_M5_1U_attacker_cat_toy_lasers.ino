@@ -127,6 +127,7 @@ void all_indicators_on(void) {
 void halt_with_error_indication(void) {
   red_led_off();
   green_led_off();
+  all_lasers_off(); // for safety
   for(;;) {
     const unsigned long speed = 120;
     green_led_off();
@@ -287,11 +288,29 @@ bool beamsplitter_photodiode(uint8_t which) {
 }
 
 void wait_for_laser_to_come_on(uint8_t which) {  
-  while (!beamsplitter_photodiode(which)) ;
+  unsigned long started_waiting = millis();
+  const unsigned long too_long = 2000; // two seconds
+  while (!beamsplitter_photodiode(which)) {
+    unsigned long now = millis();
+    if ((now - started_waiting) > too_long) {
+      Serial.println("in wait_for_laser_to_come_on(), timed out---halted");
+      all_lasers_off();
+      halt_with_error_indication();
+    }
+  }
 }
 
 void wait_for_laser_to_go_off(uint8_t which) { 
-  while (beamsplitter_photodiode(which)) ;
+  unsigned long started_waiting = millis();
+  const unsigned long too_long = 2000; // two seconds
+  while (beamsplitter_photodiode(which)) {
+    unsigned long now = millis();
+    if ((now - started_waiting) > too_long) {
+      Serial.println("in wait_for_laser_to_go_off(), timed out---halted");
+      all_lasers_off();
+      halt_with_error_indication();
+    }
+  }
 }
 
 // Lasers fire for one cycle_time. This is a blocking function.
@@ -304,8 +323,6 @@ void fire_lasers(int bit_3, int bit_2, int bit_1, int bit_0, unsigned long firin
   if (bit_2) laser_on(2);
   if (bit_1) laser_on(1);
   if (bit_0) laser_on(0);
-
-  // If the beamsplitter photo diodes are not hooked up, these trivially succeed:
 
   if (bit_3) wait_for_laser_to_come_on(3);
   if (bit_2) wait_for_laser_to_come_on(2);
