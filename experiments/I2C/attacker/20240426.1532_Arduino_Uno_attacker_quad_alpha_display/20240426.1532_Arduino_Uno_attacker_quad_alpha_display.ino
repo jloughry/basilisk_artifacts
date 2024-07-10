@@ -1,11 +1,20 @@
+#define SDA 0xAA
+#define SCL 0x55
+
 const unsigned int green_led_indicator_pin = 5;
 const unsigned int red_led_indicator_pin = 6;
 const unsigned int laser_SCL_pin = 9;
 const unsigned int laser_SDA_pin = 8;
-const unsigned int speed_test_photodiode = 10;
+const unsigned int speed_test_photodiode_pin = 10;
 const unsigned int pushbutton = 11;
 
-const unsigned int I2C_bit_interval = 10;
+const unsigned int I2C_bit_interval = 2; // 10 (old---milliseconds)
+
+// Works reliably at 39 µs; fails to register at 37 µs; corrupted data at 38 µs.
+const unsigned long I2C_bit_interval_microseconds = 100; // µs
+// 40 µs corresponds to 25 kbps, or 25 kHz.
+// THe laser speed was about 100 µs, so we only expected 10 KHz.
+
 
 void setup() {
   pinMode(red_led_indicator_pin, OUTPUT);
@@ -14,9 +23,10 @@ void setup() {
   pinMode(laser_SCL_pin, OUTPUT);
   pinMode(laser_SDA_pin, OUTPUT);
   pinMode(pushbutton, INPUT_PULLUP);
-  pinMode(speed_test_photodiode, INPUT);
-
+  pinMode(speed_test_photodiode_pin, INPUT);
   all_lasers_off();
+  Serial.begin(9600);
+  // laser_speed_test(SCL);
 }
 
 void led_on(void) {
@@ -43,137 +53,283 @@ void green_led_off(void) {
   digitalWrite(green_led_indicator_pin, LOW);
 }
 
-bool error_state = false;
-
-void cooperative_error_indication(void) {
-  const unsigned int blink_interval = 300;
-  static enum states {red, green} state = red;
+void cooperative_blink(void) {
+  const unsigned int blink_interval = 1000;
+  static enum states {off, on} state = off;
   static unsigned long time_of_last_state_change = 0;
+  unsigned long now = millis();
 
-  if (error_state) {
-    unsigned long now = millis();
-
-    if (now - time_of_last_state_change > blink_interval) {
-      switch(state) {
-        case red:
-          red_led_off();
-          green_led_on();
-          state = green;
-          break;
-        case green:
-          green_led_off();
-          red_led_on();
-          state = red;
-          break;
-        default:
-          red_led_on();
-          green_led_off();
-          state = red;
-          break;
-      }
-      time_of_last_state_change = now;
+  if (now - time_of_last_state_change > blink_interval) {
+    switch (state) {
+      case off:
+        led_on();
+        state = on;
+        break;
+      case on:
+        led_off();
+        state = off;
+        break;
+      default:
+        led_off();
+        state = off;
+        break;
     }
-  }
-  else {
-    red_led_off();
-    green_led_off();
+    time_of_last_state_change = now;
   }
 }
 
-// This function never returns.
+/*
+   This function never returns.
+*/
 
-void error_indication(void) {
-  while(true) {
-    red_led_on();
+void halt_with_error_indication(void) {
+  red_led_off();
+  green_led_off();
+  all_lasers_off(); // for safety
+  for (;;) {
+    const unsigned long speed = 120;
     green_led_off();
-    delay(300);
+    red_led_on();
+    delay(speed);
     red_led_off();
     green_led_on();
-    delay(300);
+    delay(speed);
   }
 }
 
-bool button_pressed(void) {
-  return !digitalRead(pushbutton);
-}
-
-void laser_SDA_on(void) {
-  digitalWrite(laser_SDA_pin, HIGH);
-}
-
-void laser_SDA_off(void) {
-  digitalWrite(laser_SDA_pin, LOW);
-}
-
-void laser_SCL_on(void) {
-  digitalWrite(laser_SCL_pin, HIGH);
-}
-
-void laser_SCL_off(void) {
-  digitalWrite(laser_SCL_pin, LOW);
+bool speed_test_photodiode(void) {
+  return (!digitalRead(speed_test_photodiode_pin));
 }
 
 void all_lasers_off(void) {
-  laser_SDA_off();
-  laser_SCL_off();
+  digitalWrite(laser_SDA_pin, LOW);
+  digitalWrite(laser_SCL_pin, LOW);
 }
 
-void all_lasers_on(void) {
-  laser_SDA_on();
-  laser_SCL_on();
-}
-
-void aim_lasers(void) {
-  static enum states {off, on} state = off;
-  switch(state) {
-    case on:
-      if (button_pressed()) {
-        state = off;
-        delay(200); // debouncing
-      }
-      while (!button_pressed()) {
-        all_lasers_on();
-        delay(I2C_bit_interval);
-        all_lasers_off();
-        delay(200);
-      }
-      state = off;
-      delay(200); // debouncing
-      break;
-    case off:
-      if (button_pressed()) {
-        state = on;
-        delay(200); // debouncing
-      }
-      break;    
-    default:
-      state = off;
-      break;
+void wait_for_laser_to_come_on(void) {
+  unsigned long started_waiting = micros();
+  const unsigned long too_long = 2000000; // two seconds
+  while (!speed_test_photodiode()) {
+    unsigned long now = micros();
+    unsigned long interval = now - started_waiting;
+    if (interval > too_long) {
+      Serial.print("interval = ");
+      Serial.print(interval);
+      Serial.println(" µs.");
+      Serial.println("in wait_for_laser_to_come_on(), timed out---halted.");
+      all_lasers_off();
+      halt_with_error_indication();
+    }
   }
 }
 
+void wait_for_laser_to_go_off(void) {
+  unsigned long started_waiting = micros();
+  const unsigned long too_long = 2000000; // two secondws
+  while (speed_test_photodiode()) {
+    unsigned long now = micros();
+    unsigned long interval = now - started_waiting;
+    if (interval > too_long) {
+      Serial.print("interval = ");
+      Serial.print(interval);
+      Serial.println(" µs.");
+      Serial.println("in wait_for_laser_to_go_off(), timed out---halted.");
+      all_lasers_off();
+      halt_with_error_indication();
+    }
+  }
+}
+
+void laser_on(unsigned which_laser) {
+  switch (which_laser) {
+    case SDA:
+      digitalWrite(laser_SDA_pin, HIGH);
+      break;
+    case SCL:
+      digitalWrite(laser_SCL_pin, HIGH);
+      break;
+    default:
+      all_lasers_off();
+      Serial.println("in laser_on(), halting from switch()");
+      halt_with_error_indication();
+  }
+}
+
+void laser_off(unsigned which_laser) {
+    switch (which_laser) {
+    case SDA:
+      digitalWrite(laser_SDA_pin, LOW);
+      break;
+    case SCL:
+      digitalWrite(laser_SCL_pin, LOW);
+      break;
+    default:
+      all_lasers_off();
+      Serial.println("in laser_off(), halting from switch()");
+      halt_with_error_indication();
+  }
+}
+
+/*
+ * These functions together look for single or double click or long press.
+ */
+
+enum attacks {single_click, double_click, long_press} selected_attack = single_click;
+
+bool simple_button_pressed(void) {
+  return !digitalRead(pushbutton);
+}
+
+void debounce(void) {
+  delay(50);
+}
+
+bool button_pressed_or_long_press(void) {
+  if (simple_button_pressed()) {
+    unsigned long time_button_first_pressed = millis();
+    green_led_on();
+    debounce();
+    green_led_off();
+    while (simple_button_pressed()) {
+      const unsigned long_press_interval = 1000; // one second
+      if ((millis() - time_button_first_pressed) > long_press_interval) {
+        selected_attack = long_press;
+        return true;
+      }
+    }
+    debounce();
+    selected_attack = single_click;
+    // but wait a little longer in case we get another click
+    unsigned long started_waiting_for_double_click = millis();
+    const unsigned long double_click_interval = 500; // half a second
+    while ((millis() - started_waiting_for_double_click) < double_click_interval) {
+      if (simple_button_pressed()) {
+        green_led_on();
+        selected_attack = double_click;
+        break;
+      }
+    }
+    debounce();
+    green_led_off();
+    delay(750); // short pause to ensure double click is not followed by a spurious click.
+    return true;
+  }
+  return false;
+}
+
+void aim_lasers_one_cycle(void) {
+  red_led_on();
+  all_lasers_on();
+  delayMicroseconds(I2C_bit_interval_microseconds);
+  all_lasers_off();
+  delay(250);
+  red_led_off();
+}
+
+void simple_aim_lasers(void) {
+  // returns when the button is pressed, AFTER having been released.
+  if (simple_button_pressed()) {
+    while (simple_button_pressed()) {
+      aim_lasers_one_cycle();
+    }
+  }
+  debounce();
+  while (!simple_button_pressed()) {
+    aim_lasers_one_cycle();
+  }
+  all_lasers_off();
+  delay(500); // wait to make sure button released.
+  return;
+}
+
+/*
+void laser_SDA_on(void) {
+  laser_on(SDA);
+}
+
+void laser_SDA_off(void) {
+  laser_off(SDA);
+}
+
+void laser_SCL_on(void) {
+  laser_on(SCL);
+}
+
+void laser_SCL_off(void) {
+  laser_off(SCL);
+}
+*/
+
+void all_lasers_on(void) {
+  laser_on(SDA);
+  laser_on(SCL);
+}
+
+void laser_speed_test(unsigned which_laser) {
+  all_lasers_off();
+  Serial.println("Beginning laser speed test");
+
+  while (true) {
+    switch(which_laser) {
+      case SDA:
+        Serial.print("SDA: ");
+        break;
+      case SCL:
+        Serial.print("SCL: ");
+        break;
+      default:
+        Serial.print("???: ");
+        break;
+    }
+    unsigned long time_laser_commanded_on = micros();
+    laser_on(which_laser);
+    wait_for_laser_to_come_on();
+    unsigned long time_laser_seen_to_appear = micros();
+    delay(50); // time to settle down
+    laser_off(which_laser);
+    unsigned long time_laser_commanded_off = micros();
+    wait_for_laser_to_go_off();
+    unsigned long time_laser_seen_to_go_away = micros();
+    
+    unsigned long turn_on_latency = time_laser_seen_to_appear - time_laser_commanded_on;
+    unsigned long turn_off_latency = time_laser_seen_to_go_away - time_laser_commanded_off;
+    Serial.print("turn-on latency = ");
+    Serial.print(turn_on_latency);
+    Serial.print(" µs; turn-off-latency = ");
+    Serial.print(turn_off_latency);
+    Serial.print(" µs. The laser is ");
+    if (turn_on_latency < 500 && turn_off_latency < 500) {
+      Serial.println("fast.");
+    }
+    else {
+      Serial.println("slow.");
+    }
+    delay(1000); // wait a second
+  } // while
+}
+
 void SDA_low(void) {
-  laser_SDA_on();
+  laser_on(SDA);
 }
 
 void SDA_high(void) {
-  laser_SDA_off();
+  laser_off(SDA);
 }
 
 void SCL_low(void) {
-  laser_SCL_on();
+  laser_on(SCL);
 }
 
 void SCL_high(void) {
-  laser_SCL_off();
+  laser_off(SCL);
 }
 
 void wait(void) {
-  delay(I2C_bit_interval);
+  delayMicroseconds(I2C_bit_interval_microseconds);
 }
 
 void wait_half(void) {
-  delay(I2C_bit_interval / 2);
+  delayMicroseconds(I2C_bit_interval_microseconds / 2);
 }
 
 void I2C_start_condition(void) {
@@ -214,7 +370,7 @@ void I2C_write_bit(bool bit) {
 
 void I2C_wait_for_ACK(void) {
   // precondtion: SCL is low.
-  // SDA should only change when SCL is low. 
+  // SDA should only change when SCL is low.
   wait_half();
   SDA_high(); // release SDA
   wait_half();
@@ -236,38 +392,14 @@ bool I2C_write_byte(unsigned char byte) {
   // postcondition: SCL is low.
 }
 
-void cooperative_blink(void) {
-  const unsigned int blink_interval = 1000;
-  static enum states {off, on} state = off;
-  static unsigned long time_of_last_state_change = 0;
-  unsigned long now = millis();
-
-  if (now - time_of_last_state_change > blink_interval) {
-    switch(state) {
-      case off:
-        led_on();
-        state = on;
-        break;
-      case on:
-        led_off();
-        state = off;
-        break;
-      default:
-        led_off();
-        state = off;
-        break;
-    }
-    time_of_last_state_change = now;
-  }
-}
-
 uint16_t displayRAM[8];
+uint8_t order_of_displays[] = {0x71, 0x72, 0x73, 0x70};
 
 void show_on_address(uint8_t addr) {
   I2C_start_condition();
   I2C_write_byte((addr << 1) | 0); // 0 for write;
   I2C_write_byte(0); // tell it memory address 0
-  for (int i=0; i<8; i++) {
+  for (int i = 0; i < 8; i++) {
     I2C_write_byte(displayRAM[i] & 0xff);
     I2C_write_byte(displayRAM[i] >> 8);
   }
@@ -390,7 +522,7 @@ void character_I(int place) {
   light_up_segment_A(place);
   light_up_segment_J(place);
   light_up_segment_M(place);
-  light_up_segment_D(place);  
+  light_up_segment_D(place);
 }
 
 void character_K(int place) {
@@ -497,12 +629,13 @@ void character_star(int place) {
 }
 
 void proof_of_concept(void) {
+  red_led_on();
   clear_displayRAM();
   character_P(1);
   character_R(2);
   character_O(3);
   character_O(4);
-  show_on_address(0x70);
+  show_on_address(0x71);
   clear_displayRAM();
   character_F(1);
   // space
@@ -521,107 +654,63 @@ void proof_of_concept(void) {
   character_E(2);
   character_P(3);
   character_T(4);
-  show_on_address(0x71);
-}
-
-void danger_laser(void) {
-  clear_displayRAM();
-  character_D(1);
-  character_A(2);
-  character_N(3);
-  character_G(4);
   show_on_address(0x70);
-  clear_displayRAM();
-  character_E(1);
-  character_R(2);
-  // space
-  character_L(4);;
-  show_on_address(0x72);
-  clear_displayRAM();
-  character_A(1);
-  character_S(2);
-  character_E(3);
-  character_R(4);
-  show_on_address(0x73);
-  clear_displayRAM();
-  // space
-  character_star(2);
-  character_dash(3);
-  character_dash(4);
-  show_on_address(0x71);
+  red_led_off();
 }
 
 void do_not_look_into(void) {
+  red_led_on();
   clear_displayRAM();
   character_D(1);
   character_O(2);
   // space
   character_N(4);
-  show_on_address(0x70);
+  show_on_address(order_of_displays[0]);
   clear_displayRAM();
   character_O(1);
   character_T(2);
   // space
   character_L(4);;
-  show_on_address(0x72);
+  show_on_address(order_of_displays[1]);
   clear_displayRAM();
   character_O(1);
   character_O(2);
   character_K(3);
   // space
-  show_on_address(0x73);
+  show_on_address(order_of_displays[2]);
   clear_displayRAM();
   character_I(1);
   character_N(2);
   character_T(3);
   character_O(4);
-  show_on_address(0x71);
+  show_on_address(order_of_displays[3]);
+  red_led_off();
 }
 
-void remotely_expolit(void) {
-  clear_displayRAM();
-  character_R(1);
-  character_E(2);
-  character_M(3);
-  character_O(4);
-  show_on_address(0x70);
-  delay(1000);
-  clear_displayRAM();
-  character_T(1);
-  character_E(2);
-  character_L(3);
-  character_Y(4);
-  show_on_address(0x72);
-  delay(1000);
-  clear_displayRAM();
-  // space
-  character_E(2);
-  character_X(3);
-  character_P(4);
-  // space
-  show_on_address(0x73);
-  delay(1000);
-  clear_displayRAM();
-  character_L(1);
-  character_O(2);
-  character_I(3);
-  character_T(4);
-  show_on_address(0x71);
-  delay(1000);
-  clear_displayRAM();
+void continuous_attack(void) {
+  while (!simple_button_pressed()) {
+    proof_of_concept();
+    delay(10); // anything other than 10 will reliably crash the target.
+  }
 }
 
 void loop() {
   cooperative_blink();
-  cooperative_error_indication();
-  if (button_pressed()) {
-    error_state = !error_state;
-    delay(400); // for debouncing
+  
+  if (button_pressed_or_long_press()) {
+    switch (selected_attack) {
+      case single_click:
+        proof_of_concept();
+        break;
+      case double_click:
+        continuous_attack();
+        break;
+      case long_press:
+        simple_aim_lasers();
+        break;
+      default:
+        halt_with_error_indication();
+        break;
+    }
   }
-  /*
-  // aim_lasers();
-  if (button_pressed()) {
-    proof_of_concept();
-  }
-  */
 }
