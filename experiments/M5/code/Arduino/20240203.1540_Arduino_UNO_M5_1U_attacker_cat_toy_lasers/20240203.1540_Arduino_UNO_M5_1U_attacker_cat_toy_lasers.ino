@@ -12,9 +12,21 @@ unsigned long cycle_time = 0; // microseconds; global so everyone can see it.
 unsigned long laser_firing_time = 0; // microseconds
 unsigned long overlap = 0; // microseconds
 
-// All time measurements, except for trivial use of delay(), are in microseconds.
+// All time measurements, except for trivial use of delay(), are in microseconds now.
 
-enum attacks {blinker, increment} selected_attack = blinker;
+// call this function from setup()
+
+unsigned version_number = 5;
+
+void indicate_version_number(void) {
+  for (int i=0; i < version_number; i++) {
+    yellow_led_on();
+    delay(100);
+    yellow_led_off();
+    delay(400);
+  }
+  delay(1000);
+}
 
 void setup() {
   for (int i=0; i<4; i++) {
@@ -38,6 +50,8 @@ void setup() {
   all_indicators_off();
   indicate_laser_off();
 
+  indicate_version_number();
+
   Serial.begin(9600);
   Serial.println("Ready.");
 }
@@ -45,6 +59,8 @@ void setup() {
 /*
  * This function response to single or double click differently.
  */
+
+enum attacks {blinker, increment} selected_attack = blinker;
 
 bool button_pressed(void) {
   if (!digitalRead(PUSHBUTTON_SWITCH_PIN)) {
@@ -826,11 +842,11 @@ void cooperative_phase_locked_loop(void) {
   static unsigned long time_of_last_state_change = 0;
   static unsigned long cycle_time_age = 0;
   const unsigned long decision_level = 10; // after this many times through, conclude we have lock.
-  unsigned long too_long = 2500000; // microseconds; change this to 120_000_000 for slow clock.
   const unsigned cycles_between_accumulator_bits = 49;
   static unsigned long time_first_bit_seen = 0;
   static unsigned long time_second_bit_seen = 0;
   unsigned long new_estimated_cycle_time = 0;
+  static unsigned long phase_lock_birthday = 0;
   unsigned long now = micros();
 
   switch(state) {
@@ -926,8 +942,11 @@ void cooperative_phase_locked_loop(void) {
           break;
         case 0:
           state = empty;
-          time_of_last_state_change = now;
+          time_of_last_state_change = micros();
           if (cycle_time_age > decision_level) {
+            if (!phase_lock) {
+              phase_lock_birthday = micros();
+            }
             phase_lock = true;
           }
           break;
@@ -939,8 +958,23 @@ void cooperative_phase_locked_loop(void) {
       }
       break;
   }
+
+  const unsigned long too_long = 2500000; // microseconds; change this to 120_000_000 for slow clock.
+  now = micros();
+
   if (phase_lock) {
     if (now - time_of_last_state_change > too_long) {
+      state = other;
+      time_of_last_state_change = now;
+      phase_lock = false;
+      cycle_time_age = 0;
+    }
+  }
+
+  const unsigned long one_minute_timeout = 60000000;
+
+  if (phase_lock) {
+    if (now - phase_lock_birthday > one_minute_timeout) {
       state = other;
       time_of_last_state_change = now;
       phase_lock = false;
@@ -952,14 +986,10 @@ void cooperative_phase_locked_loop(void) {
 
 void loop() {
   unsigned long now = millis();
-  static unsigned long initial_delay = now + 4000; // ms; four seconds from now
 
   cooperative_blink();
   cooperative_synchronized_flashing_indicator_mechanism();
-
-  // if (now > initial_delay) {
-    cooperative_phase_locked_loop();
-  // }
+  cooperative_phase_locked_loop();
   
   if (phase_lock) {
     if (button_pressed()) {
