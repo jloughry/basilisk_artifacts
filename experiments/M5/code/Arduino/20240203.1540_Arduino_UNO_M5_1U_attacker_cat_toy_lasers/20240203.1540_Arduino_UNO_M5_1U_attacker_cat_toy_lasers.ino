@@ -16,7 +16,7 @@ unsigned long overlap = 0; // microseconds
 
 // call this function from setup()
 
-unsigned version_number = 5;
+unsigned version_number = 6;
 
 void indicate_version_number(void) {
   for (int i=0; i < version_number; i++) {
@@ -971,10 +971,10 @@ void cooperative_phase_locked_loop(void) {
     }
   }
 
-  const unsigned long one_minute_timeout = 60000000;
+  const unsigned long two_minute_timeout = 120000000; // two miutes in µs
 
   if (phase_lock) {
-    if (now - phase_lock_birthday > one_minute_timeout) {
+    if (now - phase_lock_birthday > two_minute_timeout) {
       state = other;
       time_of_last_state_change = now;
       phase_lock = false;
